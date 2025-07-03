@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #ffff;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 10px;
+}
+
+/* add the code bellow */
+@layer utilities {
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+   /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+  }
+}
+
+.readonly-input {
+    background-color: white;
+    color: #1f2937; /* gray-800 */
+    border-color: #d1d5db; /* gray-300 */
+    cursor: default;
+}
+.readonly-input:focus {
+    border-color: #a5b4fc; /* indigo-300 */
+    box-shadow: 0 0 0 1px rgba(165, 180, 252, 0.5); /* focus ring */
+}
+
