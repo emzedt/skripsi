@@ -107,14 +107,25 @@
                 const selesai = document.getElementById('tanggal_selesai_cuti').value;
                 const container = document.getElementById('jumlah-hari-container');
                 const jenisCuti = document.getElementById('jenis_cuti').value;
+                const tanggalLibur = @json($libur);
 
                 if (mulai && selesai) {
                     const date1 = new Date(mulai);
                     const date2 = new Date(selesai);
 
-                    // Hitung selisih hari (termasuk hari terakhir)
-                    const timeDiff = date2.getTime() - date1.getTime();
-                    const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+                    let dayDiff = 0;
+
+                    for (let d = new Date(date1); d <= date2; d.setDate(d.getDate() + 1)) {
+                        const yyyyMmDd = d.toISOString().split('T')[0];
+
+                        // Cek apakah weekend atau libur
+                        const isWeekend = d.getDay() === 0 || d.getDay() === 6; // Minggu=0, Sabtu=6
+                        const isLibur = tanggalLibur.includes(yyyyMmDd);
+
+                        if (!isWeekend && !isLibur) {
+                            dayDiff++;
+                        }
+                    }
 
                     document.getElementById('jumlah-hari').textContent = dayDiff;
                     container.classList.remove('hidden');

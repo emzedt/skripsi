@@ -78,9 +78,10 @@
                         <x-input-label :value="__('Foto Lembur')" />
                         @if ($permintaanLembur->foto)
                             <div class="mt-2">
-                                <img src="{{ asset('storage/lembur/' . $permintaanLembur->foto) }}" alt="Dokumen Cuti"
+                                <img src="{{ asset('storage/' . $permintaanLembur->foto) }}"
+                                    alt="Dokumen Permintaan Lembur"
                                     class="h-32 object-contain rounded cursor-pointer hover:opacity-80 transition"
-                                    onclick="showImageModal('{{ asset('storage/lembur/' . $permintaanLembur->foto) }}')">
+                                    onclick="showImageModal('{{ asset('storage/' . $permintaanLembur->foto) }}')">
                                 <p class="text-sm text-gray-500 mt-1">Klik foto untuk memperbesar</p>
                             </div>
                         @else

@@ -22,6 +22,7 @@
             'Cuti Biasa', 'Cuti Spesial' => 'https://hris-infico.test/persetujuan-cuti',
             'Izin Satu Hari', 'Izin Setengah Hari Pagi', 'Izin Setengah Hari Siang' => 'https://hris-infico.test/izin',
             'Sakit' => 'https://hris-infico.test/sakit',
+            'Permintaan Lembur' => 'https://hris-infico.test/permintaan-lembur',
             default => 'https://hris-infico.test',
         };
     @endphp

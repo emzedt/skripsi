@@ -14,7 +14,7 @@
     </p>
 
     @if ($alasan)
-        <p><strong>Catatan dari atasan:</strong><br>{{ $alasan }} oleh {{ $user->boss()->nama }}</p>
+        <p><strong>Catatan dari atasan:</strong><br>{{ $alasan }} oleh {{ optional($user->boss())->nama }}</p>
     @endif
 
     <br>

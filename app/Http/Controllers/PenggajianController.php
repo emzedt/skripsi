@@ -8,6 +8,7 @@ use App\Models\GajiBulanan;
 use App\Models\GajiHarian;
 use App\Models\Izin;
 use App\Models\Kalender;
+use App\Models\Lembur;
 use App\Models\Penggajian;
 use App\Models\User;
 use App\Models\PermintaanLembur;
@@ -185,31 +186,30 @@ class PenggajianController extends Controller
 
     public function store(Request $request)
     {
+        // 1️⃣ Validasi input
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'periode_mulai' => 'required|date|date_format:Y-m-d',
             'periode_selesai' => 'required|date|date_format:Y-m-d|after_or_equal:periode_mulai',
         ]);
 
+        // 2️⃣ Ambil user lengkap
         $user = User::with(['gajiBulanan', 'gajiHarian', 'lembur'])->findOrFail($validated['user_id']);
 
-        // Hitung lembur
+        // 3️⃣ Hitung total lembur
         $lemburRequests = PermintaanLembur::where('user_id', $user->id)
             ->where('status', 'Disetujui')
             ->whereBetween('tanggal_mulai', [$validated['periode_mulai'], $validated['periode_selesai']])
             ->get();
 
         $totalUangLembur = 0;
-        $totalJamLembur = 0;
-
         foreach ($lemburRequests as $lemburRequest) {
+            $tanggalLembur = $lemburRequest->tanggal_mulai;
+
+            // ⚠️ PERBAIKAN: Hanya cek di tabel 'absensis'
             $wasPresent = Absensi::where('user_id', $user->id)
-                ->whereDate('tanggal', $lemburRequest->tanggal_mulai)
-                ->whereNotNull('jam_masuk')
-                ->exists()
-                || AbsensiSales::where('user_id', $user->id)
-                ->whereDate('tanggal', $lemburRequest->tanggal_mulai)
-                ->where('status_persetujuan', 'Disetujui')
+                ->whereDate('tanggal', $tanggalLembur)
+                ->whereIn('status', ['Hadir', 'Telat'])
                 ->exists();
 
             if ($wasPresent) {
@@ -217,91 +217,76 @@ class PenggajianController extends Controller
                 $normalJam = min($jamLembur, 5);
                 $extraJam = max($jamLembur - 5, 0);
 
-                $pay = ($normalJam * $user->lembur->upah_lembur_per_jam)
-                    + ($extraJam * $user->lembur->upah_lembur_over_5_jam);
+                $upahLemburPerJam = $user->lembur->upah_lembur_per_jam ?? 0;
+                $upahLemburOver5Jam = $user->lembur->upah_lembur_over_5_jam ?? 0;
 
+                $pay = ($normalJam * $upahLemburPerJam) + ($extraJam * $upahLemburOver5Jam);
                 $totalUangLembur += $pay;
-                $totalJamLembur += $jamLembur;
             }
         }
 
-        $gajiPokok = 0;
-        $uangMakan = 0;
-        $potonganGaji = 0;
-
+        // 4️⃣ Hitung izin
         $izinDisetujui = Izin::where('user_id', $user->id)
             ->where('status', 'Disetujui')
             ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
             ->get();
 
-        // Hindari double potong → simpan tanggal izin
-        $tanggalIzinApproved = $izinDisetujui
-            ->pluck('tanggal')
-            ->map(fn($tgl) => $tgl->format('Y-m-d'))
-            ->toArray();
-
-        // --- AWAL PERBAIKAN LOGIKA IZIN ---
-
-        // 1. Hitung jumlah "Izin Satu Hari"
         $jumlahIzinSatuHari = $izinDisetujui->where('jenis_izin', 'Satu Hari')->count();
+        $jumlahSetengahHari = $izinDisetujui->whereIn('jenis_izin', ['Setengah Hari Pagi', 'Setengah Hari Siang'])->count();
+        $potonganDariSetengahHari = (int)($jumlahSetengahHari / 2);
+        $totalPotonganIzin = $jumlahIzinSatuHari + $potonganDariSetengahHari;
 
-        // 2. Hitung JUMLAH KEJADIAN "Izin Setengah Hari"
-        $jumlahKejadianSetengahHari = $izinDisetujui->whereIn('jenis_izin', ['Setengah Hari Pagi', 'Setengah Hari Siang'])->count();
-
-        // 3. Hitung berapa PASANG izin setengah hari yang ada (misal: 2 kejadian -> 1 pasang, 3 kejadian -> 1 pasang)
-        // (int) akan berfungsi sama seperti floor() untuk pembagian positif, mengubah 2/2=1, dan 3/2=1.5 menjadi 1.
-        $potonganDariPasanganSetengahHari = (int)($jumlahKejadianSetengahHari / 2);
-
-        // 4. Total hari potongan dari izin adalah gabungan keduanya
-        $totalPotonganIzin = $jumlahIzinSatuHari + $potonganDariPasanganSetengahHari;
-
-        // Hitung Alfa (hanya yang bukan karena izin)
+        // 5️⃣ Hitung alfa
         $jumlahAlfa = Absensi::where('user_id', $user->id)
             ->where('status', 'Alfa')
             ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
-            ->whereNotIn('tanggal', $tanggalIzinApproved)
             ->count();
 
-        // Hitung Alfa untuk AbsensiSales
-        $absensiSales = AbsensiSales::where('user_id', $user->id)
-            ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
-            ->whereNull('deleted_at')
-            ->get();
-
-        $jumlahAlfaSales = 0;
-
-        if ($user->hasPermission('Tambah Absensi Sales')) {
-            if ($absensiSales->isEmpty()) {
-                $jumlahAlfaSales++;
-            } elseif ($absensiSales->every(fn($a) => $a->status_persetujuan === 'Ditolak')) {
-                $jumlahAlfaSales++;
+        // 6️⃣ Total hari kerja ideal di periode ini (exclude hari libur)
+        $periode = CarbonPeriod::create($validated['periode_mulai'], $validated['periode_selesai']);
+        $totalHariKerjaIdeal = 0;
+        foreach ($periode as $tanggal) {
+            if (!Kalender::where('tanggal', $tanggal->format('Y-m-d'))->exists()) {
+                $totalHariKerjaIdeal++;
             }
         }
 
-        if ($user->isKaryawanTetap() && $user->gajiBulanan) {
-            $gajiPokok = $user->gajiBulanan->gaji_bulanan;
+        // 7️⃣ Hitung jumlah hari hadir (benar-benar hadir)
+        $jumlahHariHadir = Absensi::where('user_id', $user->id)
+            ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
+            ->whereIn('status', ['Hadir', 'Telat'])
+            ->count();
+
+        // 8️⃣ Hitung gaji & potongan
+        $gajiPokok = 0;
+        $uangMakan = 0;
+        $potonganGaji = 0;
+        $gajiDiterima = 0;
+
+        if ($user->isKaryawanHarian() && $user->gajiHarian) {
+            // Asumsi:
+            // - Gaji Harian = gaji per hari
+            // - Uang Makan = upah makan per hari
+            // - Total Hari Kerja yang dibayar = jumlah hari hadir
+            $gajiPokok = $jumlahHariHadir * ($user->gajiHarian->gaji_harian ?? 0);
+            $uangMakan = $jumlahHariHadir * ($user->gajiHarian->upah_makan_harian ?? 0);
+
+            // Perhitungan potongan didasarkan pada ketidakhadiran (izin dan alfa)
+            $jumlahHariTidakHadir = $totalPotonganIzin + $jumlahAlfa;
+            // Potongan dihitung berdasarkan gaji harian
+            $potonganGaji = $jumlahHariTidakHadir * ($user->gajiHarian->gaji_harian ?? 0);
+
+            // Total gaji yang diterima = (Gaji Pokok + Uang Makan + Uang Lembur) - Potongan
+            $gajiDiterima = ($gajiPokok + $uangMakan + $totalUangLembur) - $potonganGaji;
+        } elseif ($user->isKaryawanTetap() && $user->gajiBulanan) {
             $hariKerjaEfektif = 22;
-            $gajiPerHari = $gajiPokok / $hariKerjaEfektif;
-
-            $potonganGaji = ($jumlahAlfa + $jumlahAlfaSales + $totalPotonganIzin) * $gajiPerHari;
-        } elseif ($user->isKaryawanHarian() && $user->gajiHarian) {
-            $jumlahHariKerja = $this->hitungJumlahHariKerja(
-                $validated['periode_mulai'],
-                $validated['periode_selesai'],
-                $validated['user_id']
-            );
-
-            $gajiPokok = $jumlahHariKerja * $user->gajiHarian->gaji_harian;
-            $uangMakan = $jumlahHariKerja * $user->gajiHarian->upah_makan_harian;
-
-            $gajiPerHari = $user->gajiHarian->gaji_harian;
-            $potonganGaji = ($jumlahAlfa + $jumlahAlfaSales + $totalPotonganIzin) * $gajiPerHari;
+            $gajiPerHari = $user->gajiBulanan->gaji_bulanan / $hariKerjaEfektif;
+            $potonganGaji = ($jumlahAlfa + $totalPotonganIzin) * $gajiPerHari;
+            $gajiPokok = $user->gajiBulanan->gaji_bulanan - $potonganGaji;
+            $gajiDiterima = $gajiPokok + $totalUangLembur; // Asumsi gaji tetap tidak ada uang makan harian terpisah
         }
 
-        // Hitung gaji akhir
-        $gajiDiterima = ($gajiPokok + $uangMakan + $totalUangLembur) - $potonganGaji;
-
-        // Simpan ke database
+        // 9️⃣ Simpan data
         Penggajian::create([
             'user_id' => $user->id,
             'periode_mulai' => $validated['periode_mulai'],
@@ -314,6 +299,7 @@ class PenggajianController extends Controller
         return redirect()->route('penggajian.index')
             ->with('success', 'Penggajian berhasil dibuat');
     }
+
 
 
     public function show(Penggajian $penggajian)
@@ -333,7 +319,7 @@ class PenggajianController extends Controller
         // Calculate overtime data
         $overtimeOver5Hours = $penggajian->user->permintaanLembur
             ->where('status', 'Disetujui')
-            ->filter(fn($lembur) => $lembur->lama_lembur > 5)
+            ->filter(fn($lembur) => $lembur->lama_lembur > 300)
             ->count();
 
         $totalJamLembur = $penggajian->user->permintaanLembur
@@ -345,6 +331,7 @@ class PenggajianController extends Controller
             'penggajian' => $penggajian,
             'overtimeOver5Hours' => $overtimeOver5Hours,
             'totalJamLembur' => $totalJamLembur,
+            // 'uangLembur' => $uangLembur,
             'tanggalCetak' => now()->format('d F Y H:i'),
         ];
 

@@ -86,6 +86,10 @@ class User extends Authenticatable
 
         // Cari user yang jabatannya termasuk ke parent jabatan
         return User::whereIn('jabatan_id', $parentIds)->first();
+
+        return User::whereHas('jabatan', function ($q) {
+            $q->whereDoesntHave('parentJabatans');
+        })->first();
     }
 
     public function isAdmin()

@@ -6,6 +6,7 @@ use App\Mail\PermohonanDiajukanEmail;
 use App\Mail\PermohonanDiketahuiEmail;
 use App\Mail\PermohonanDiterimaEmail;
 use App\Models\Izin;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -102,14 +103,19 @@ class IzinController extends Controller
                 $request->tanggal
             ));
         } else {
-            // fallback ke HRD kalau tidak punya boss
-            Mail::to($user->email)->send(new PermohonanDiajukanEmail(
-                $user->nama,
-                $user->nama,
-                'Izin ' . $request->jenis_izin,
-                $request->tanggal,
-                $request->tanggal
-            ));
+            $admin = User::whereHas('jabatan', function ($q) {
+                $q->whereDoesntHave('parentJabatans');
+            })->first();
+
+            if ($admin) {
+                Mail::to($admin->email)->send(new PermohonanDiajukanEmail(
+                    $admin->nama,
+                    $user->nama,
+                    'Izin ' . $request->jenis_izin,
+                    $request->tanggal,
+                    $request->tanggal
+                ));
+            }
         }
 
         return redirect()->route('izin.index')->with('success', 'Pengajuan izin berhasil dikirim');

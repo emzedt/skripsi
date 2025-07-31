@@ -7,7 +7,7 @@
     <div class="container mx-auto py-8">
         <div class="bg-white shadow-md rounded-md overflow-hidden">
             <div class="p-6"x-data="{
-                currentImageUrl: '{{ $permintaanLembur->foto ? asset('storage/lembur/' . $permintaanLembur->foto) : '' }}',
+                currentImageUrl: '{{ $permintaanLembur->foto ? asset('storage/' . $permintaanLembur->foto) : '' }}',
                 newImageUrl: null,
                 showModal: false,
                 modalImageUrl: '',

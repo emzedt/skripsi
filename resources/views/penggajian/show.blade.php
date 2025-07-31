@@ -1,3 +1,26 @@
+@php
+    $periodeMulai = $penggajian->periode_mulai;
+    $periodeSelesai = $penggajian->periode_selesai;
+
+    $lemburDalamPeriode = $penggajian->user->permintaanLembur
+        ->where('status', 'Disetujui')
+        ->filter(function ($lembur) use ($periodeMulai, $periodeSelesai) {
+            return $lembur->tanggal_mulai >= $periodeMulai && $lembur->tanggal_mulai <= $periodeSelesai;
+        });
+
+    $overtimeOver5Hours = $lemburDalamPeriode->filter(fn($l) => $l->lama_lembur > 300)->count();
+
+    $totalJamLembur = $lemburDalamPeriode->sum('lama_lembur') / 60; // menit ke jam
+
+    $uangLembur = $lemburDalamPeriode->sum(function ($lembur) use ($penggajian) {
+        $jam = $lembur->lama_lembur / 60;
+        $normal = min($jam, 5);
+        $over = max($jam - 5, 0);
+        return $normal * ($penggajian->user->lembur->upah_lembur_per_jam ?? 0) +
+            $over * ($penggajian->user->lembur->upah_lembur_over_5_jam ?? 0);
+    });
+@endphp
+
 <x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold leading-tight text-gray-800">
@@ -87,23 +110,14 @@
                                     </tr>
                                     <tr>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 w-1/3">
-                                            Uang
-                                            Lembur</td>
+                                            Uang Lembur</td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">Rp
-                                            {{ number_format($penggajian->lembur, 0, ',', '.') }}
-                                        </td>
+                                            {{ number_format($uangLembur, 0, ',', '.') }}</td>
+                                    </tr>
                                     </tr>
                                     <tr>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 w-1/3">
                                             Jumlah Lembur Over (> 5 Jam)
-                                            @php
-                                                $overtimeOver5Hours = $penggajian->user->permintaanLembur
-                                                    ->where('status', 'Disetujui')
-                                                    ->filter(function ($lembur) {
-                                                        return $lembur->lama_lembur > 5;
-                                                    })
-                                                    ->count();
-                                            @endphp
                                         </td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">
                                             {{ $overtimeOver5Hours }} x</td>
@@ -111,12 +125,6 @@
                                     <tr>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 w-1/3">
                                             Total Jumlah Jam Lembur
-                                            @php
-                                                $totalJamLembur =
-                                                    $penggajian->user->permintaanLembur
-                                                        ->where('status', 'Disetujui')
-                                                        ->sum('lama_lembur') / 60;
-                                            @endphp
                                         </td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">
                                             {{ $totalJamLembur }} jam</td>

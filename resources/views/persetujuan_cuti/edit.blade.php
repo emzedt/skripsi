@@ -52,8 +52,8 @@
 
                     <div>
                         <x-input-label for="lama_cuti" :value="__('Lama Cuti')" />
-                        <x-text-input id="lama_cuti" class="block mt-1 w-full cursor-auto" type="text" value=" hari"
-                            readonly />
+                        <x-text-input id="lama_cuti" class="block mt-1 w-full cursor-auto" type="text"
+                            value="{{ $days }} hari" readonly />
                     </div>
 
                     <div>
@@ -166,31 +166,6 @@
                 hideImageModal();
             }
         });
-
-        function hitungHariCuti() {
-            const tanggalMulaiInput = document.getElementById('tanggal_mulai_cuti');
-            const tanggalSelesaiInput = document.getElementById('tanggal_selesai_cuti');
-            const lamaCutiInput = document.getElementById('lama_cuti');
-
-            const tanggalMulaiValue = tanggalMulaiInput.value;
-            const tanggalSelesaiValue = tanggalSelesaiInput.value;
-
-            if (tanggalMulaiValue && tanggalSelesaiValue) {
-                // Menggunakan moment.js untuk parsing dan manipulasi tanggal yang lebih mudah
-                const tanggalMulai = moment(tanggalMulaiValue, 'D MMMM YYYY');
-                const tanggalSelesai = moment(tanggalSelesaiValue, 'D MMMM YYYY');
-
-                if (tanggalMulai.isValid() && tanggalSelesai.isValid()) {
-                    const selisihHari = tanggalSelesai.diff(tanggalMulai, 'days') +
-                        1; // Ditambah 1 agar tanggal mulai juga terhitung
-                    lamaCutiInput.value = selisihHari + ' hari';
-                } else {
-                    lamaCutiInput.value = ''; // Kosongkan jika format tanggal tidak valid
-                }
-            } else {
-                lamaCutiInput.value = ''; // Kosongkan jika salah satu atau kedua tanggal belum diisi
-            }
-        }
 
         document.addEventListener('DOMContentLoaded', hitungHariCuti);
     </script>

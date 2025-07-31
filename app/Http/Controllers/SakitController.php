@@ -6,6 +6,7 @@ use App\Mail\PermohonanDiajukanEmail;
 use App\Mail\PermohonanDiketahuiEmail;
 use App\Mail\PermohonanDiterimaEmail;
 use App\Models\Sakit;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -111,14 +112,19 @@ class SakitController extends Controller
                 $request->tanggal_selesai
             ));
         } else {
-            // fallback ke HRD kalau tidak punya boss
-            Mail::to($user->email)->send(new PermohonanDiajukanEmail(
-                $user->nama,
-                $user->nama,
-                'Sakit',
-                $request->tanggal_mulai,
-                $request->tanggal_selesai
-            ));
+            $admin = User::whereHas('jabatan', function ($q) {
+                $q->whereDoesntHave('parentJabatans');
+            })->first();
+
+            if ($admin) {
+                Mail::to($admin->email)->send(new PermohonanDiajukanEmail(
+                    $admin->nama,
+                    $user->nama,
+                    'Sakit',
+                    $request->tanggal_mulai,
+                    $request->tanggal_selesai
+                ));
+            }
         }
 
         return redirect()->route('sakit.index')->with('success', 'Pengajuan sakit berhasil dikirim');

@@ -7,6 +7,7 @@ use App\Mail\PermohonanDiajukanEmail;
 use App\Mail\PermohonanDiketahuiEmail;
 use App\Mail\PermohonanDiterimaEmail;
 use App\Models\Cuti;
+use App\Models\Kalender;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -116,11 +117,11 @@ class CutiController extends Controller
                 ->addColumn('aksi', function ($cuti) {
                     $actions = '';
                     // Gunakan Auth::user()->can() untuk memeriksa izin
-                    if (Auth::user()->hasPermission('Edit Pengajuan Cuti')) {
-                        $editUrl = route('pengajuan_cuti.edit', $cuti->id);
+                    if (Auth::user()->hasPermission('Lihat Persetujuan Cuti')) {
+                        $editUrl = route('persetujuan_cuti.edit', $cuti->id);
                         $actions .= '<a href="' . $editUrl . '" class="text-yellow-600 hover:text-yellow-900" title="Edit"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></a>';
                     }
-                    if (Auth::user()->hasPermission('Hapus Pengajuan Cuti')) {
+                    if (Auth::user()->hasPermission('Lihat Persetujuan Cuti')) {
                         $actions .= '<button type="button" class="text-red-600 hover:text-red-900" title="Hapus" onclick="confirmDelete(' . $cuti->id . ', \'' . e($cuti->nama_cuti) . '\')"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>';
                     }
                     return '<div class="flex space-x-2 justify-center">' . $actions . '</div>';
@@ -135,25 +136,40 @@ class CutiController extends Controller
 
     public function create()
     {
-        return view('pengajuan_cuti.create');
+        $libur = Kalender::whereIn('jenis_libur', ['Libur', 'Cuti Bersama'])
+            ->pluck('tanggal')
+            ->toArray();
+
+        return view('pengajuan_cuti.create', [
+            'libur' => $libur,
+        ]);
     }
 
     public function store(CutiRequest $request)
     {
         $user = User::select('id', 'nama', 'sisa_hak_cuti')->where('id', Auth::id())->first();
 
-        // Validate leave type
         $jenisCuti = $request->jenis_cuti;
         $isRegularLeave = ($jenisCuti === 'Cuti Biasa');
 
-        // For regular leave, check remaining leave balance
-        if ($isRegularLeave) {
-            // Calculate number of leave days
-            $tanggal_mulai = Carbon::parse($request->tanggal_mulai_cuti);
-            $tanggal_selesai = Carbon::parse($request->tanggal_selesai_cuti);
-            $jumlah_hari = $tanggal_mulai->diffInDays($tanggal_selesai) + 1; // +1 to include last day
+        $tanggal_mulai = Carbon::parse($request->tanggal_mulai_cuti);
+        $tanggal_selesai = Carbon::parse($request->tanggal_selesai_cuti);
 
-            // Check if remaining leave balance is sufficient
+        // Ambil semua hari libur nasional dan cuti bersama di rentang ini
+        $hariLibur = Kalender::whereIn('jenis_libur', ['Libur', 'Cuti Bersama'])
+            ->whereBetween('tanggal', [$tanggal_mulai, $tanggal_selesai])
+            ->pluck('tanggal')
+            ->toArray();
+
+        // Hitung jumlah hari kerja efektif (exclude hari libur & weekend)
+        $jumlah_hari = 0;
+        for ($date = $tanggal_mulai->copy(); $date->lte($tanggal_selesai); $date->addDay()) {
+            if (!in_array($date->toDateString(), $hariLibur) && !$date->isWeekend()) {
+                $jumlah_hari++;
+            }
+        }
+
+        if ($isRegularLeave) {
             if ($user->sisa_hak_cuti <= 0) {
                 return redirect()->route('pengajuan_cuti.index')
                     ->with('error', 'Cuti biasa hanya bisa diajukan jika masih ada sisa hak cuti');
@@ -161,60 +177,63 @@ class CutiController extends Controller
 
             if ($user->sisa_hak_cuti < $jumlah_hari) {
                 return redirect()->route('pengajuan_cuti.index')
-                    ->with('error', 'Sisa hak cuti tidak mencukupi! Anda membutuhkan ' . $jumlah_hari . ' hari, sisa cuti ' . $user->sisa_hak_cuti . ' hari');
+                    ->with('error', "Sisa hak cuti tidak cukup! Anda butuh {$jumlah_hari} hari, sisa cuti: {$user->sisa_hak_cuti} hari");
             }
+
+            // Kurangi sisa hak cuti sesuai jumlah hari kerja efektif
+            $user->decrement('sisa_hak_cuti', $jumlah_hari);
         }
 
-        // Handle file upload
+        // Handle upload foto (jika ada)
         $namaFile = null;
         if ($request->hasFile('foto_cuti') && $request->file('foto_cuti')->isValid()) {
             $foto = $request->file('foto_cuti');
             $namaFile = now()->format('YmdHis') . '.' . $foto->getClientOriginalExtension();
-            $path = 'cuti/' . $namaFile;
-            Storage::disk('public')->put($path, file_get_contents($foto));
+            Storage::disk('public')->put('cuti/' . $namaFile, file_get_contents($foto));
         }
 
-        // Deduct leave balance only for regular leave
-        if ($isRegularLeave) {
-            $user->decrement('sisa_hak_cuti', $jumlah_hari);
-        }
-
-        $data = [
+        // Simpan data cuti
+        $cuti = Cuti::create([
             'nama_cuti' => $request->nama_cuti,
             'jenis_cuti' => $jenisCuti,
-            'tanggal_mulai_cuti' => $request->tanggal_mulai_cuti,
-            'tanggal_selesai_cuti' => $request->tanggal_selesai_cuti,
+            'tanggal_mulai_cuti' => $tanggal_mulai,
+            'tanggal_selesai_cuti' => $tanggal_selesai,
             'foto_cuti' => $namaFile,
             'alasan_cuti' => $request->alasan_cuti,
             'status' => 'Menunggu',
             'user_id' => $user->id,
-        ];
+            'jumlah_hari_cuti' => $isRegularLeave ? $jumlah_hari : 0,
+        ]);
 
-        Cuti::create($data);
-
+        // Kirim notifikasi email ke atasan atau admin
         $users = Auth::user();
         $boss = $users->boss();
 
         if ($boss) {
             Mail::to($boss->email)->send(new PermohonanDiajukanEmail(
                 $boss->nama,
-                $user->nama,
+                $users->nama,
                 $jenisCuti,
                 $request->tanggal_mulai_cuti,
                 $request->tanggal_selesai_cuti
             ));
         } else {
-            // fallback ke HRD kalau tidak punya boss
-            Mail::to($user->email)->send(new PermohonanDiajukanEmail(
-                $user->nama,
-                $user->nama,
-                $jenisCuti,
-                $request->tanggal_mulai_cuti,
-                $request->tanggal_selesai_cuti
-            ));
+            $admin = User::whereHas('jabatan', function ($q) {
+                $q->whereDoesntHave('parentJabatans');
+            })->first();
+
+            if ($admin) {
+                Mail::to($admin->email)->send(new PermohonanDiajukanEmail(
+                    $admin->nama,
+                    $users->nama,
+                    $jenisCuti,
+                    $request->tanggal_mulai_cuti,
+                    $request->tanggal_selesai_cuti
+                ));
+            }
         }
 
-        return redirect()->route('pengajuan_cuti.index')->with('success', 'Pengajuan Cuti Berhasil Ditambahkan!');
+        return redirect()->route('pengajuan_cuti.index')->with('success', 'Pengajuan cuti berhasil ditambahkan!');
     }
 
     public function edit(Cuti $cuti)
@@ -230,6 +249,28 @@ class CutiController extends Controller
 
     public function update(CutiRequest $request, Cuti $cuti)
     {
+        if ($cuti->status !== 'Ditolak' && $request->status === 'Ditolak' && $cuti->jenis_cuti === 'Cuti Biasa') {
+            // Hitung jumlah hari efektif cuti yang sudah pernah dipotong
+            $tanggal_mulai = Carbon::parse($cuti->tanggal_mulai_cuti);
+            $tanggal_selesai = Carbon::parse($cuti->tanggal_selesai_cuti);
+
+            $hariLibur = \App\Models\Kalender::whereIn('jenis_libur', ['Libur Nasional', 'Cuti Bersama'])
+                ->whereBetween('tanggal', [$tanggal_mulai, $tanggal_selesai])
+                ->pluck('tanggal')
+                ->toArray();
+
+            $jumlah_hari = 0;
+            for ($date = $tanggal_mulai->copy(); $date->lte($tanggal_selesai); $date->addDay()) {
+                if (!in_array($date->toDateString(), $hariLibur) && !$date->isWeekend()) {
+                    $jumlah_hari++;
+                }
+            }
+
+            if ($jumlah_hari > 0) {
+                $cuti->user->increment('sisa_hak_cuti', $jumlah_hari);
+            }
+        }
+
         $data = [
             'nama_cuti' => $request->nama_cuti,
             'tanggal_mulai_cuti' => $request->tanggal_mulai_cuti,
@@ -262,7 +303,24 @@ class CutiController extends Controller
     public function editPersetujuanCuti(Cuti $cuti)
     {
         $users = User::select('id', 'nama')->get();
-        return view('persetujuan_cuti.edit', compact('cuti', 'users'));
+        $libur = Kalender::whereIn('jenis_libur', ['Libur', 'Cuti Bersama'])
+            ->pluck('tanggal')
+            ->toArray();
+
+        // Hitung lama cuti (exclude weekend & libur)
+        $start = \Carbon\Carbon::parse($cuti->tanggal_mulai_cuti);
+        $end = \Carbon\Carbon::parse($cuti->tanggal_selesai_cuti);
+
+        $days = 0;
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $isWeekend = $date->isWeekend(); // sabtu/minggu
+            $isLibur = in_array($date->toDateString(), $libur);
+            if (!$isWeekend && !$isLibur) {
+                $days++;
+            }
+        }
+
+        return view('persetujuan_cuti.edit', compact('cuti', 'users', 'libur', 'days'));
     }
 
     public function updatePersetujuanCuti(CutiRequest $request, Cuti $cuti)
@@ -273,6 +331,32 @@ class CutiController extends Controller
         ];
 
         $cuti->update($data);
+
+        // Kalau status ditolak, balikin sisa hak cuti user
+        if ($request->status === 'Ditolak') {
+            // Hitung jumlah hari cuti valid (tidak termasuk weekend & libur)
+            $libur = Kalender::whereIn('jenis_libur', ['Libur', 'Cuti Bersama'])
+                ->pluck('tanggal')
+                ->toArray();
+
+            $start = \Carbon\Carbon::parse($cuti->tanggal_mulai_cuti);
+            $end = \Carbon\Carbon::parse($cuti->tanggal_selesai_cuti);
+
+            $jumlahHari = 0;
+            for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+                $isWeekend = $date->isWeekend();
+                $isLibur = in_array($date->toDateString(), $libur);
+                if (!$isWeekend && !$isLibur) {
+                    $jumlahHari++;
+                }
+            }
+
+            $user = $cuti->user;
+
+            if ($cuti->jenis_cuti === 'Cuti Biasa') {
+                $user->increment('sisa_hak_cuti', $jumlahHari);
+            }
+        }
 
         // Setelah update status cuti:
         Mail::to($cuti->user->email)->send(new PermohonanDiterimaEmail(

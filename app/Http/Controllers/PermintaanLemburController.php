@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PermohonanDiajukanEmail;
+use App\Mail\PermohonanDiketahuiEmail;
+use App\Mail\PermohonanDiterimaEmail;
 use App\Models\PermintaanLembur;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -136,6 +140,33 @@ class PermintaanLemburController extends Controller
 
         PermintaanLembur::create($validated);
 
+        $users = Auth::user();
+        $boss = $users->boss();
+
+        if ($boss) {
+            Mail::to($boss->email)->send(new PermohonanDiajukanEmail(
+                $boss->nama,
+                $users->nama,
+                'Permintaan Lembur',
+                $request->tanggal_mulai,
+                $request->tanggal_selesai
+            ));
+        } else {
+            $admin = User::whereHas('jabatan', function ($q) {
+                $q->whereDoesntHave('parentJabatans');
+            })->first();
+
+            if ($admin) {
+                Mail::to($admin->email)->send(new PermohonanDiajukanEmail(
+                    $admin->nama,
+                    $users->nama,
+                    'Permintaan Lembur',
+                    $request->tanggal_mulai,
+                    $request->tanggal_selesai
+                ));
+            }
+        }
+
         return redirect()->route('permintaan_lembur.index')
             ->with('success', 'Permintaan lembur berhasil dibuat');
     }
@@ -173,7 +204,7 @@ class PermintaanLemburController extends Controller
             ],
             'tugas' => 'required|string|max:255',
             'status' => 'required|in:Disetujui,Ditolak,Menunggu',
-            'foto' => 'required',
+            'foto' => 'nullable',
             'user_id' => 'required|exists:users,id',
         ]);
 
@@ -200,6 +231,30 @@ class PermintaanLemburController extends Controller
         $validated['lama_lembur'] = ($end - $start) / 60; // Konversi ke menit
 
         $permintaanLembur->update($validated);
+
+        Mail::to($permintaanLembur->user->email)->send(new PermohonanDiterimaEmail(
+            $permintaanLembur->user,
+            'Permintaan Lembur',
+            $request->status,
+            '-'
+        ));
+
+        $user = Auth::user();
+        $boss = $user->boss(); // method ini harus kamu definisikan
+
+        if (!$boss) {
+            $boss = $user;
+        }
+
+        if ($boss) {
+            Mail::to($boss->email)->send(new PermohonanDiketahuiEmail(
+                $boss,
+                $permintaanLembur->user,
+                'Permintaan Lembur',
+                $request->status,
+                'Permohonan oleh bawahan Anda telah ' . strtolower($request->status)
+            ));
+        }
 
         return redirect()->route('permintaan_lembur.index')
             ->with('success', 'Permintaan lembur berhasil diperbarui');

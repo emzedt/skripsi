@@ -43,6 +43,13 @@ class DashboardController extends Controller
 
             $alfaDates = $alfa->pluck('tanggal')->toArray();
         } elseif (Auth::user()->hasPermission('Tambah Absensi Sales')) {
+            $now = Carbon::now();
+            $tahun = $now->year;
+            $bulan = $now->month;
+
+            $tanggalAwal = Carbon::create($tahun, $bulan, 1);
+            $tanggalAkhir = $now;
+
             $absenMasuk = AbsensiSales::where('user_id', $userId)
                 ->where('status_persetujuan', 'Disetujui')
                 ->whereBetween('tanggal', [$tanggalAwal, $tanggalAkhir])
@@ -51,7 +58,16 @@ class DashboardController extends Controller
             $allDates = [];
             for ($date = $tanggalAwal->copy(); $date->lte($tanggalAkhir); $date->addDay()) {
                 if ($date->isWeekday()) {
-                    $allDates[] = $date->format('Y-m-d');
+                    // Hari ini (today)
+                    if ($date->isSameDay($now)) {
+                        // Hanya tambahkan hari ini ke daftar pengecekan kalau sudah lewat jam 17:00
+                        if ($now->hour >= 17) {
+                            $allDates[] = $date->format('Y-m-d');
+                        }
+                    } else {
+                        // Tanggal sebelum hari ini langsung tambahkan
+                        $allDates[] = $date->format('Y-m-d');
+                    }
                 }
             }
 

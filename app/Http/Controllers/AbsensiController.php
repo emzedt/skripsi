@@ -120,9 +120,10 @@ class AbsensiController extends Controller
 
         $todayIs = now()->toDateString();
         $isHoliday = Kalender::whereDate('tanggal', $todayIs)->first();
-        if ($isHoliday->jenis_libur === 'Cuti Bersama' ||  $isHoliday->jenis_libur === 'Libur') {
+        if ($isHoliday && ($isHoliday->jenis_libur === 'Cuti Bersama' || $isHoliday->jenis_libur === 'Libur')) {
             return redirect()->route('absensi.index')->with('error', 'Anda tidak bisa absen karena lagi libur atau cuti bersama!');
         }
+
 
         $belumAbsen = Absensi::where('user_id', $user->id)
             ->where('status', 'Belum Absen')
