@@ -50,13 +50,16 @@
                                 <option value="" disabled selected>-- Pilih Izin --</option>
                                 <option value="Satu Hari"
                                     {{ old('jenis_izin', $izin->jenis_izin) == 'Satu Hari' ? 'selected' : '' }}>
-                                    Satu Hari (08:00-17:00)</option>
+                                    Satu Hari (08:00-17:00)
+                                </option>
                                 <option value="Setengah Hari Pagi"
                                     {{ old('jenis_izin', $izin->jenis_izin) == 'Setengah Hari Pagi' ? 'selected' : '' }}>
-                                    Setengah Hari Pagi (08:00-12:00)</option>
+                                    Setengah Hari Pagi (08:00-12:00)
+                                </option>
                                 <option value="Setengah Hari Siang"
                                     {{ old('jenis_izin', $izin->jenis_izin) == 'Setengah Hari Siang' ? 'selected' : '' }}>
-                                    Setengah Hari Siang (13:00-17:00)</option>
+                                    Setengah Hari Siang (13:00-17:00)
+                                </option>
                             </select>
                             <x-input-error :messages="$errors->get('jenis_izin')" class="mt-2" />
                         </div>

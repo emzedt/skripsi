@@ -26,13 +26,13 @@
                     <div>
                         <x-input-label for="longitude" :value="__('Longitude')" />
                         <x-text-input id="longitude" class="block mt-1 w-full" type="text" name="longitude"
-                            :value="old('longitude')" readonly />
+                            :value="old('longitude')" />
                         <x-input-error :messages="$errors->get('longitude')" class="mt-2" />
                     </div>
                     <div>
                         <x-input-label for="latitude" :value="__('Latitude')" />
                         <x-text-input id="latitude" class="block mt-1 w-full" type="text" name="latitude"
-                            :value="old('latitude')" readonly />
+                            :value="old('latitude')" />
                         <x-input-error :messages="$errors->get('latitude')" class="mt-2" />
                     </div>
                     <div>
@@ -60,124 +60,140 @@
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const defaultLocation = [-6.200000, 106.816666]; // Jakarta
+    document.addEventListener("DOMContentLoaded", function() {
+        const defaultLocation = [-6.200000, 106.816666]; // Jakarta
 
-            // Inisialisasi Leaflet Map
-            const map = L.map("map", {
-                center: defaultLocation,
-                zoom: 13,
-                fullscreenControl: true, // Tambahkan tombol fullscreen
-                fullscreenControlOptions: {
-                    position: "topright",
-                },
-            });
-
-            // Tambahkan Layer Peta
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: "&copy; OpenStreetMap contributors",
-            }).addTo(map);
-
-            let marker = L.marker(defaultLocation, {
-                draggable: true
-            }).addTo(map);
-
-            // Tombol "Gunakan Lokasi Saat Ini"
-            const locateButton = L.control({
-                position: 'topright'
-            });
-            locateButton.onAdd = function(map) {
-                const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-                div.innerHTML = `
-                    <a title="Gunakan Lokasi Saat Ini"
-                       class="bg-white rounded-full shadow-md hover:bg-gray-100 cursor-pointer">
-                        📍
-                    </a>
-                `;
-                div.onclick = () => getCurrentLocation();
-                return div;
-            };
-            locateButton.addTo(map);
-
-            // Fungsi deteksi lokasi saat ini
-            function getCurrentLocation() {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        position => {
-                            const userLat = position.coords.latitude;
-                            const userLng = position.coords.longitude;
-
-                            // Update marker dan view
-                            marker.setLatLng([userLat, userLng]);
-                            map.setView([userLat, userLng], 17);
-                            updateInputs(userLat, userLng);
-
-                        },
-                        error => {
-                            Swal.fire("Error!", "Izinkan akses GPS atau pastikan GPS aktif", "error");
-                        }
-                    );
-                } else {
-                    Swal.fire("Browser Tidak Support", "GPS tidak tersedia di browser ini", "warning");
-                }
-            }
-
-            function updateInputs(lat, lng) {
-                document.getElementById("latitude").value = lat;
-                document.getElementById("longitude").value = lng;
-            }
-
-            marker.on("dragend", function(e) {
-                const position = marker.getLatLng();
-                updateInputs(position.lat, position.lng);
-            });
-
-            map.on("click", function(e) {
-                marker.setLatLng(e.latlng);
-                updateInputs(e.latlng.lat, e.latlng.lng);
-            });
-
-            // Tambahkan pencarian lokasi
-            const geocoder = L.Control.geocoder({
-                defaultMarkGeocode: false
-            }).on("markgeocode", function(e) {
-                const latlng = e.geocode.center;
-                map.setView(latlng, 13);
-                marker.setLatLng(latlng);
-                updateInputs(latlng.lat, latlng.lng);
-            }).addTo(map);
-
-            // Fungsi untuk toggle ukuran peta
-            const toggleButton = document.getElementById("toggle-map");
-            let isExpanded = false;
-
-            toggleButton.addEventListener("click", function(e) {
-                e.preventDefault();
-                const mapContainer = document.getElementById("map-container");
-
-                if (isExpanded) {
-                    mapContainer.style.height = "256px";
-                    toggleButton.textContent = "🔽";
-                } else {
-                    mapContainer.style.height = "80vh";
-                    toggleButton.textContent = "🔼";
-                }
-
-                setTimeout(() => {
-                    map.invalidateSize(); // Perbarui ukuran peta setelah animasi
-                }, 300);
-
-                isExpanded = !isExpanded;
-            });
-
-            // Event untuk deteksi fullscreen
-            map.on("enterFullscreen", function() {
-                console.log("Map masuk fullscreen");
-            });
-
-            map.on("exitFullscreen", function() {
-                console.log("Map keluar fullscreen");
-            });
+        // Inisialisasi Leaflet Map
+        const map = L.map("map", {
+            center: defaultLocation,
+            zoom: 13,
+            fullscreenControl: true,
+            fullscreenControlOptions: {
+                position: "topright",
+            },
         });
-    </script>
+
+        // Tambahkan Layer Peta
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(map);
+
+        let marker = L.marker(defaultLocation, {
+            draggable: true
+        }).addTo(map);
+
+        // Tombol "Gunakan Lokasi Saat Ini"
+        const locateButton = L.control({
+            position: 'topright'
+        });
+        locateButton.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = `
+                <a title="Gunakan Lokasi Saat Ini"
+                   class="bg-white rounded-full shadow-md hover:bg-gray-100 cursor-pointer">
+                    📍
+                </a>
+            `;
+            div.onclick = () => getCurrentLocation();
+            return div;
+        };
+        locateButton.addTo(map);
+
+        // Fungsi deteksi lokasi saat ini
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const userLat = position.coords.latitude;
+                        const userLng = position.coords.longitude;
+
+                        // Update marker dan view
+                        marker.setLatLng([userLat, userLng]);
+                        map.setView([userLat, userLng], 17);
+                        updateInputs(userLat, userLng);
+                    },
+                    error => {
+                        Swal.fire("Error!", "Izinkan akses GPS atau pastikan GPS aktif", "error");
+                    }
+                );
+            } else {
+                Swal.fire("Browser Tidak Support", "GPS tidak tersedia di browser ini", "warning");
+            }
+        }
+
+        // Fungsi untuk mengupdate nilai input
+        function updateInputs(lat, lng) {
+            document.getElementById("latitude").value = lat;
+            document.getElementById("longitude").value = lng;
+        }
+
+        // --- TAMBAHAN: Fungsi untuk update marker dari input ---
+        // Fungsi ini membaca nilai dari input lat/lng dan memindahkan marker
+        function updateMarkerFromInputs() {
+            const lat = parseFloat(document.getElementById("latitude").value);
+            const lng = parseFloat(document.getElementById("longitude").value);
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const newLatLng = [lat, lng];
+                marker.setLatLng(newLatLng);
+                // Pusatkan peta ke lokasi baru dari input
+                map.setView(newLatLng, map.getZoom());
+            }
+        }
+
+        // --- TAMBAHAN: Event listener untuk input latitude dan longitude ---
+        // Panggil fungsi updateMarkerFromInputs saat nilai di kolom input berubah
+        document.getElementById("latitude").addEventListener("change", updateMarkerFromInputs);
+        document.getElementById("longitude").addEventListener("change", updateMarkerFromInputs);
+
+
+        // Event saat marker selesai di-drag
+        marker.on("dragend", function(e) {
+            const position = marker.getLatLng();
+            updateInputs(position.lat, position.lng);
+        });
+
+        // Event saat peta di-klik
+        map.on("click", function(e) {
+            marker.setLatLng(e.latlng);
+            updateInputs(e.latlng.lat, e.latlng.lng);
+        });
+
+        // Tambahkan pencarian lokasi
+        const geocoder = L.Control.geocoder({
+            defaultMarkGeocode: false
+        }).on("markgeocode", function(e) {
+            const latlng = e.geocode.center;
+            map.setView(latlng, 13);
+            marker.setLatLng(latlng);
+            updateInputs(latlng.lat, latlng.lng);
+        }).addTo(map);
+
+        // Fungsi untuk toggle ukuran peta
+        const toggleButton = document.getElementById("toggle-map");
+        let isExpanded = false;
+
+        toggleButton.addEventListener("click", function(e) {
+            e.preventDefault();
+            const mapContainer = document.getElementById("map-container");
+
+            if (isExpanded) {
+                mapContainer.style.height = "256px";
+                toggleButton.textContent = "🔽";
+            } else {
+                mapContainer.style.height = "80vh";
+                toggleButton.textContent = "🔼";
+            }
+
+            setTimeout(() => {
+                map.invalidateSize(); // Perbarui ukuran peta setelah animasi
+            }, 300);
+
+            isExpanded = !isExpanded;
+        });
+
+        // Inisialisasi nilai awal input
+        updateInputs(defaultLocation[0], defaultLocation[1]);
+    });
+</script>
 </x-app-layout>

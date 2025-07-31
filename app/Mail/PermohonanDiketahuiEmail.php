@@ -30,9 +30,7 @@ class PermohonanDiketahuiEmail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Status Permohonan ' . $this->jenis . ' Anda: ' . $this->status,
-        );
+        return new Envelope(subject: 'Status Permohonan ' . $this->jenis . ' ' . $this->user->nama . ': ' . $this->status);
     }
 
     public function content(): Content

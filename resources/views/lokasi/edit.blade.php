@@ -172,6 +172,19 @@
             };
             locateButton.addTo(map);
 
+            // --- TAMBAHAN: Tambahkan pencarian lokasi ---
+            const geocoder = L.Control.geocoder({
+                defaultMarkGeocode: false,
+                placeholder: 'Cari lokasi...'
+            }).on("markgeocode", function(e) {
+                const latlng = e.geocode.center;
+                map.setView(latlng, 17);
+                marker.setLatLng(latlng);
+                updateFormInputs(latlng.lat, latlng.lng);
+                updateCirclePosition(); // Pastikan lingkaran juga pindah
+            }).addTo(map);
+            // --- Akhir Bagian Tambahan ---
+
             // Get current location function
             function getCurrentLocation(e) {
                 e.preventDefault();

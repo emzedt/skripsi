@@ -88,8 +88,6 @@ class User extends Authenticatable
         return User::whereIn('jabatan_id', $parentIds)->first();
     }
 
-
-
     public function isAdmin()
     {
         return $this->jabatan && $this->jabatan->parentJabatans()->doesntExist();
@@ -104,6 +102,24 @@ class User extends Authenticatable
         return $this->jabatan->childJabatans()
             ->where('jabatans.id', $user->jabatan_id) // Spesifik tabel
             ->exists();
+    }
+
+    public function isHRD()
+    {
+        // HRD didefinisikan sebagai user yang punya semua permission berikut
+        $requiredPermissions = [
+            'Tambah Penggajian',
+            'Edit Penggajian',
+            'Hapus Penggajian',
+            'Tambah People Development',
+            'Edit People Development',
+            'Hapus People Development',
+        ];
+
+        return $this->jabatan
+            && $this->jabatan->permissions()
+            ->whereIn('nama', $requiredPermissions)
+            ->count() === count($requiredPermissions);
     }
 
     public function subordinates()

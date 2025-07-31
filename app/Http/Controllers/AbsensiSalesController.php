@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AbsensiSalesRequest;
 use App\Models\AbsensiSales;
+use App\Models\Kalender;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class AbsensiSalesController extends Controller
             // Mengambil data dengan relasi user untuk menampilkan nama
             $user = Auth::user();
 
-            if ($user->isAdmin()) {
+            if ($user->isAdmin() || $user->isHRD()) {
                 $query = AbsensiSales::with('user:id,nama')->select('absensi_sales.*');
             } else {
                 $query = AbsensiSales::with('user:id,nama')->select('absensi_sales.*')->where(function ($query) use ($user) {
@@ -70,6 +71,12 @@ class AbsensiSalesController extends Controller
 
     public function create()
     {
+        $today = now()->toDateString();
+        $isHoliday = Kalender::whereDate('tanggal', $today)->first();
+        if ($isHoliday->jenis_libur === 'Cuti Bersama' ||  $isHoliday->jenis_libur === 'Libur') {
+            return redirect()->route('absensi_sales.index')->with('error', 'Anda tidak bisa absen karena lagi libur atau cuti bersama!');
+        }
+
         return view('absensi_sales.create');
     }
 

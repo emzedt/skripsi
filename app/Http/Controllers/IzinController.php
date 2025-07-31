@@ -140,7 +140,7 @@ class IzinController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'jenis_izin' => 'required|in:Satu Hari,Setengah Hari Pagi, Setengah Hari Siang',
+            'jenis_izin' => 'required|in:Satu Hari,Setengah Hari Pagi,Setengah Hari Siang',
             'alasan' => 'required|string',
             'dokumen_pendukung' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
             'status' => 'nullable|in:Disetujui,Ditolak,Menunggu',
@@ -179,7 +179,12 @@ class IzinController extends Controller
             $request->alasan_persetujuan
         ));
 
-        $boss = $izin->user->boss(); // method ini harus kamu definisikan
+        $user = Auth::user();
+        $boss = $user->boss(); // method ini harus kamu definisikan
+
+        if (!$boss) {
+            $boss = $user;
+        }
 
         if ($boss) {
             Mail::to($boss->email)->send(new PermohonanDiketahuiEmail(

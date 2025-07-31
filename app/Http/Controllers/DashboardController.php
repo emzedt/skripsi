@@ -63,9 +63,10 @@ class DashboardController extends Controller
         $userIds = collect([$userId]);
         if (Auth::user()->isAdmin()) {
             $userIds = User::pluck('id');
-        } elseif (Auth::user()->subordinates()->exists()) {
-            $userIds = Auth::user()->subordinates()->pluck('id')->push($userId);
         }
+        // elseif (Auth::user()->subordinates()->exists()) {
+        //     $userIds = Auth::user()->subordinates()->pluck('id')->push($userId);
+        // }
 
         // Hitung alfa hanya dari catatan status = 'Alfa'
         $jumlahAlfaSeluruhUser = Absensi::whereIn('user_id', $userIds)

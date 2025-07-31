@@ -286,10 +286,14 @@ class CutiController extends Controller
         $user = Auth::user();
         $boss = $user->boss(); // method ini harus kamu definisikan
 
+        if (!$boss) {
+            $boss = $user;
+        }
+
         if ($boss) {
             Mail::to($boss->email)->send(new PermohonanDiketahuiEmail(
                 $boss,
-                $user,
+                $cuti->user,
                 $cuti->jenis_cuti,
                 $request->status,
                 'Permohonan oleh bawahan Anda telah ' . strtolower($request->status)

@@ -182,7 +182,13 @@ class SakitController extends Controller
             $request->alasan_persetujuan
         ));
 
-        $boss = $sakit->user->boss(); // method ini harus kamu definisikan
+        $user = Auth::user();
+        $boss = $user->boss(); // method ini harus kamu definisikan
+
+        if (!$boss) {
+            $boss = $user;
+        }
+
         if ($boss) {
             Mail::to($boss->email)->send(new PermohonanDiketahuiEmail(
                 $boss,

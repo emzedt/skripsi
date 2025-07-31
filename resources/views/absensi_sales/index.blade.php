@@ -182,13 +182,15 @@
                 });
             });
 
-            @if (session('error'))
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: '{{ session('error') }}',
-                });
-            @endif
+            document.addEventListener('DOMContentLoaded', function() {
+                @if (session('error'))
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal',
+                        text: '{{ session('error') }}',
+                    });
+                @endif
+            });
         </script>
     @endpush
 </x-app-layout>

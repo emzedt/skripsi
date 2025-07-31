@@ -10,36 +10,6 @@ use Yajra\DataTables\DataTables;
 
 class PeopleDevelopmentController extends Controller
 {
-    /**
-     * Display list of employees for people development tracking
-     */
-    // public function index(Request $request)
-    // {
-    //     $currentUser = User::with(['jabatan.childJabatans.users'])->select('id', 'nama')->find(Auth::id());
-    //     $perPage = $request->query('perPage', 10);
-
-    //     if ($currentUser->isAdmin()) {
-    //         $users = User::with('jabatan', 'hakCuti', 'peopleDevelopment')->paginate($perPage)
-    //             ->appends($perPage);
-    //     } else {
-    //         $users = User::with('jabatan', 'hakCuti', 'peopleDevelopment')
-    //             ->where(function ($query) use ($currentUser) {
-    //                 $query->where('id', $currentUser->id);
-
-    //                 if ($currentUser->jabatan && $currentUser->jabatan->childJabatans()->exists()) {
-    //                     $query->orWhereIn(
-    //                         'id',
-    //                         $currentUser->subordinates()->pluck('id')
-    //                     );
-    //                 }
-    //             })
-    //             ->paginate($perPage)
-    //             ->appends($perPage);;
-    //     }
-
-    //     return view('people_development.index', compact('users'));
-    // }
-
     public function index(Request $request)
     {
         if ($request->ajax()) {
@@ -50,7 +20,7 @@ class PeopleDevelopmentController extends Controller
 
             // Terapkan logika hak akses
             $currentUser = Auth::user();
-            if (!$currentUser->isAdmin()) {
+            if (!$currentUser->isAdmin() && !$currentUser->isHRD()) {
                 $query->where(function ($q) use ($currentUser) {
                     // Hanya user itu sendiri
                     $q->where('id', $currentUser->id);

@@ -118,7 +118,7 @@
                                                         ->sum('lama_lembur') / 60;
                                             @endphp
                                         </td>
-                                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">Rp
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-right">
                                             {{ $totalJamLembur }} jam</td>
                                     </tr>
                                 @endif

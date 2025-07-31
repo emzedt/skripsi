@@ -291,7 +291,7 @@ Route::middleware('auth')->group(function () {
             Route::put('/{penggajian}/update', [PenggajianController::class, 'update'])->name('penggajian.update');
         });
         Route::middleware(['permission:Hapus Penggajian'])->group(function () {
-            Route::delete('/{penggajian}/destroy', [PenggajianController::class, 'destroy'])->name('penggajian.destroy');
+            Route::delete('/{penggajian}', [PenggajianController::class, 'destroy'])->name('penggajian.destroy');
         });
     });
 

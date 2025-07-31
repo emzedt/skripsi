@@ -47,7 +47,7 @@
                         <p class="text-2xl font-bold">{{ $absenMasuk->count() }}</p>
                     </div>
 
-                    @if (Auth::user()->isAdmin() || Auth::user()->subordinates()->exists())
+                    @if (Auth::user()->isAdmin())
                         <div
                             class="bg-white rounded-lg shadow-md p-6 text-gray-700 flex flex-col items-center justify-center">
                             <div class="bg-gray-100 rounded-md p-3 mb-2">
@@ -56,7 +56,7 @@
                             <h3 class="text-lg font-semibold mb-1">Alfa</h3>
                             <p class="text-2xl font-bold">{{ $jumlahAlfaSeluruhUser }}</p>
                         </div>
-                    @else
+                    @elseif(Auth::user())
                         <div
                             class="bg-white rounded-lg shadow-md p-6 text-gray-700 flex flex-col items-center justify-center">
                             <div class="bg-gray-100 rounded-md p-3 mb-2">
@@ -64,7 +64,7 @@
                                     class="w-8 h-8">
                             </div>
                             <h3 class="text-lg font-semibold mb-1">Alfa</h3>
-                            <p class="text-2xl font-bold">{{ count($alfaDates) }}</p>
+                            <p class="text-2xl font-bold">{{ $alfa->count() }}</p>
                         </div>
                     @endif
 
@@ -115,5 +115,4 @@
                 </div>
             </div>
         </div>
-        </
-</x-app-layout>
+        </ </x-app-layout>

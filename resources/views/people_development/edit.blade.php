@@ -81,12 +81,17 @@
                                                     name="objectives[{{ $objectiveIndex }}][kpis][{{ $kpiIndex }}][name]"
                                                     value="{{ $kpi->kpi }}" required
                                                     class="w-full py-1 px-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                                <input type="hidden" name="objectives[{{ $objectiveIndex }}][id]"
+                                                    value="{{ $objective->id }}">
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap flex space-x-2">
                                                 <input type="number" step="0.01"
                                                     name="objectives[{{ $objectiveIndex }}][kpis][{{ $kpiIndex }}][target]"
                                                     required value="{{ $kpi->target ?? '' }}"
                                                     class="w-full py-1 px-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                                <input type="hidden"
+                                                    name="objectives[{{ $objectiveIndex }}][kpis][{{ $kpiIndex }}][id]"
+                                                    value="{{ $kpi->id }}">
                                                 <select
                                                     name="objectives[{{ $objectiveIndex }}][kpis][{{ $kpiIndex }}][tipe_kpi]"
                                                     class="py-1 px-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -126,7 +131,8 @@
                             <div class="text-sm text-red-600 mt-2 total-weight-message" style="display: none;">
                                 Total bobot melebihi 100%!
                             </div>
-                            <button type="button" class="mt-2 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 add-kpi"
+                            <button type="button"
+                                class="mt-2 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 add-kpi"
                                 data-objective="{{ $objectiveIndex }}">
                                 + Tambah KPI
                             </button>

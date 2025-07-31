@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AbsensiRequest;
 use App\Models\Absensi;
 use App\Models\Izin;
+use App\Models\Kalender;
 use App\Models\Lokasi;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,7 @@ class AbsensiController extends Controller
         if ($request->ajax()) {
             $user = Auth::user();
 
-            if ($user->isAdmin()) {
+            if ($user->isAdmin() || $user->isHRD()) {
                 $data = Absensi::with('user')->select('absensis.*');
             } else {
                 $data = Absensi::with('user')->select('absensis.*')->where(function ($query) use ($user) {
@@ -117,6 +118,12 @@ class AbsensiController extends Controller
             }
         }
 
+        $todayIs = now()->toDateString();
+        $isHoliday = Kalender::whereDate('tanggal', $todayIs)->first();
+        if ($isHoliday->jenis_libur === 'Cuti Bersama' ||  $isHoliday->jenis_libur === 'Libur') {
+            return redirect()->route('absensi.index')->with('error', 'Anda tidak bisa absen karena lagi libur atau cuti bersama!');
+        }
+
         $belumAbsen = Absensi::where('user_id', $user->id)
             ->where('status', 'Belum Absen')
             ->count();
@@ -197,7 +204,7 @@ class AbsensiController extends Controller
             // Determine status based on time
             $currentTime = now();
             $jamMasuk = $currentTime->toTimeString();
-            $status = 'hadir'; // Default status
+            $status = 'Hadir'; // Default status
 
             // Cek apakah user memiliki izin 'Setengah Hari Siang' hari ini
             $izinSiang = Izin::where('user_id', Auth::id())
@@ -206,16 +213,26 @@ class AbsensiController extends Controller
                 ->whereDate('tanggal', $currentTime->toDateString())
                 ->exists();
 
+            $izinPagi = Izin::where('user_id', Auth::id())
+                ->where('status', 'Disetujui')
+                ->where('jenis_izin', 'Setengah Hari Pagi')
+                ->whereDate('tanggal', $currentTime->toDateString())
+                ->exists();
+
             // Penentuan status telat
             if ($izinSiang) {
                 // Izin siang: jika masuk setelah jam 13:00 maka telat
                 if ($currentTime->format('H:i:s') > '13:00:00') {
-                    $status = 'telat';
+                    $status = 'Telat';
+                }
+            } else if ($izinPagi) {
+                if ($currentTime->format('H:i:s') > '08:00:00') {
+                    $status = 'Telat';
                 }
             } else {
                 // Biasa: jika masuk setelah jam 08:00 maka telat
                 if ($currentTime->format('H:i:s') > '08:00:00') {
-                    $status = 'telat';
+                    $status = 'Telat';
                 }
             }
 

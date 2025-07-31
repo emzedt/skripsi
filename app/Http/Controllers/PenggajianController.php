@@ -23,12 +23,12 @@ class PenggajianController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
             $query = Penggajian::with('user:id,nama');
 
             // Terapkan logika hak akses yang benar
             $user = Auth::user();
-            if (!$user->isAdmin()) {
+
+            if (!$user->isAdmin() && !$user->isHRD()) {
                 $query->where(function ($q) use ($user) {
                     // PERBAIKAN: Seharusnya memfilter berdasarkan 'user_id' di tabel penggajian
                     $q->where('user_id', $user->id);
@@ -229,70 +229,60 @@ class PenggajianController extends Controller
         $uangMakan = 0;
         $potonganGaji = 0;
 
+        $izinDisetujui = Izin::where('user_id', $user->id)
+            ->where('status', 'Disetujui')
+            ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
+            ->get();
+
+        // Hindari double potong → simpan tanggal izin
+        $tanggalIzinApproved = $izinDisetujui
+            ->pluck('tanggal')
+            ->map(fn($tgl) => $tgl->format('Y-m-d'))
+            ->toArray();
+
+        // --- AWAL PERBAIKAN LOGIKA IZIN ---
+
+        // 1. Hitung jumlah "Izin Satu Hari"
+        $jumlahIzinSatuHari = $izinDisetujui->where('jenis_izin', 'Satu Hari')->count();
+
+        // 2. Hitung JUMLAH KEJADIAN "Izin Setengah Hari"
+        $jumlahKejadianSetengahHari = $izinDisetujui->whereIn('jenis_izin', ['Setengah Hari Pagi', 'Setengah Hari Siang'])->count();
+
+        // 3. Hitung berapa PASANG izin setengah hari yang ada (misal: 2 kejadian -> 1 pasang, 3 kejadian -> 1 pasang)
+        // (int) akan berfungsi sama seperti floor() untuk pembagian positif, mengubah 2/2=1, dan 3/2=1.5 menjadi 1.
+        $potonganDariPasanganSetengahHari = (int)($jumlahKejadianSetengahHari / 2);
+
+        // 4. Total hari potongan dari izin adalah gabungan keduanya
+        $totalPotonganIzin = $jumlahIzinSatuHari + $potonganDariPasanganSetengahHari;
+
+        // Hitung Alfa (hanya yang bukan karena izin)
+        $jumlahAlfa = Absensi::where('user_id', $user->id)
+            ->where('status', 'Alfa')
+            ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
+            ->whereNotIn('tanggal', $tanggalIzinApproved)
+            ->count();
+
+        // Hitung Alfa untuk AbsensiSales
+        $absensiSales = AbsensiSales::where('user_id', $user->id)
+            ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
+            ->whereNull('deleted_at')
+            ->get();
+
+        $jumlahAlfaSales = 0;
+
+        if ($user->hasPermission('Tambah Absensi Sales')) {
+            if ($absensiSales->isEmpty()) {
+                $jumlahAlfaSales++;
+            } elseif ($absensiSales->every(fn($a) => $a->status_persetujuan === 'Ditolak')) {
+                $jumlahAlfaSales++;
+            }
+        }
+
         if ($user->isKaryawanTetap() && $user->gajiBulanan) {
             $gajiPokok = $user->gajiBulanan->gaji_bulanan;
             $hariKerjaEfektif = 22;
             $gajiPerHari = $gajiPokok / $hariKerjaEfektif;
 
-            // Ambil izin yang disetujui
-            $izinDisetujui = Izin::where('user_id', $user->id)
-                ->where('status', 'Disetujui')
-                ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
-                ->get();
-
-            // Hindari double potong → simpan tanggal izin
-            $tanggalIzinApproved = $izinDisetujui
-                ->pluck('tanggal')
-                ->map(fn($tgl) => $tgl->format('Y-m-d'))
-                ->toArray();
-
-            // Hitung potongan izin
-            $totalPotonganIzin = 0;
-            $setengahHariCounter = [];
-
-            foreach ($izinDisetujui as $izin) {
-                $tanggalIzin = $izin->tanggal->format('Y-m-d');
-
-                if ($izin->jenis_izin == 'Satu Hari') {
-                    $totalPotonganIzin += 1;
-                } elseif (in_array($izin->jenis_izin, ['Setengah Hari Pagi', 'Setengah Hari Siang'])) {
-                    if (!isset($setengahHariCounter[$tanggalIzin])) {
-                        $setengahHariCounter[$tanggalIzin] = 0.5;
-                    } else {
-                        $setengahHariCounter[$tanggalIzin] += 0.5;
-                    }
-
-                    if ($setengahHariCounter[$tanggalIzin] >= 1) {
-                        $totalPotonganIzin += 1;
-                        unset($setengahHariCounter[$tanggalIzin]);
-                    }
-                }
-            }
-
-            // Hitung Alfa (hanya yang bukan karena izin)
-            $jumlahAlfa = Absensi::where('user_id', $user->id)
-                ->where('status', 'Alfa')
-                ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
-                ->whereNotIn('tanggal', $tanggalIzinApproved)
-                ->count();
-
-            // Hitung Alfa untuk AbsensiSales
-            $absensiSales = AbsensiSales::where('user_id', $user->id)
-                ->whereBetween('tanggal', [$validated['periode_mulai'], $validated['periode_selesai']])
-                ->whereNull('deleted_at')
-                ->get();
-
-            $jumlahAlfaSales = 0;
-
-            if ($user->hasPermission('Tambah Absensi Sales')) {
-                if ($absensiSales->isEmpty()) {
-                    $jumlahAlfaSales++;
-                } elseif ($absensiSales->every(fn($a) => $a->status_persetujuan === 'Ditolak')) {
-                    $jumlahAlfaSales++;
-                }
-            }
-
-            // Hitung total potongan
             $potonganGaji = ($jumlahAlfa + $jumlahAlfaSales + $totalPotonganIzin) * $gajiPerHari;
         } elseif ($user->isKaryawanHarian() && $user->gajiHarian) {
             $jumlahHariKerja = $this->hitungJumlahHariKerja(
@@ -303,7 +293,9 @@ class PenggajianController extends Controller
 
             $gajiPokok = $jumlahHariKerja * $user->gajiHarian->gaji_harian;
             $uangMakan = $jumlahHariKerja * $user->gajiHarian->upah_makan_harian;
-            $potonganGaji = 0;
+
+            $gajiPerHari = $user->gajiHarian->gaji_harian;
+            $potonganGaji = ($jumlahAlfa + $jumlahAlfaSales + $totalPotonganIzin) * $gajiPerHari;
         }
 
         // Hitung gaji akhir
@@ -322,6 +314,7 @@ class PenggajianController extends Controller
         return redirect()->route('penggajian.index')
             ->with('success', 'Penggajian berhasil dibuat');
     }
+
 
     public function show(Penggajian $penggajian)
     {
@@ -396,9 +389,22 @@ class PenggajianController extends Controller
 
     public function destroy(Penggajian $penggajian)
     {
-        $penggajian->delete();
-        return redirect()->route('penggajian.index')
-            ->with('success', 'Penggajian berhasil dihapus');
+        try {
+            // Ini akan menjalankan soft delete jika Trait sudah ditambahkan di Model
+            $penggajian->delete();
+
+            // Kembalikan respons JSON dengan status sukses
+            return response()->json([
+                'success' => true,
+                'message' => 'Data penggajian berhasil dihapus.'
+            ], 200);
+        } catch (\Exception $e) {
+            // (Opsional tapi bagus) Menangani jika ada error saat proses hapus
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data. Terjadi kesalahan server.'
+            ], 500);
+        }
     }
 
     public function slipGaji(Penggajian $penggajian)
