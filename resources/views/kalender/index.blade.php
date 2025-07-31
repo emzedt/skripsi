@@ -5,6 +5,32 @@
         </h2>
     </x-slot>
 
+    <style>
+        @media (max-width: 768px) {
+
+            /* Perkecil font di kalender mobile */
+            .fc-event-title-container,
+            .fc-daygrid-day-number {
+                font-size: 0.8rem !important;
+            }
+
+            .fc .fc-toolbar-title {
+                font-size: 1.1rem;
+            }
+
+            .fc .fc-button {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            /* Pastikan kalender tidak terlalu lebar di mobile */
+            #calendar-container {
+                width: 100%;
+                margin: 0;
+            }
+        }
+    </style>
+
     <div class="container mx-auto px-4 py-7">
         <div class="bg-white rounded-lg shadow-lg overflow-hidden">
             <!-- Larger calendar container with day view option -->

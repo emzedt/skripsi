@@ -11,7 +11,7 @@
                 <div class="p-6 bg-white border-b border-gray-200">
 
                     {{-- Struktur Tabel untuk DataTables --}}
-                    <table id="hak-akses-table" class="min-w-full dt-tailwindcss divide-y divide-gray-200">
+                    <table id="hak-akses-table" class="min-w-full dt-tailwindcss divide-y divide-gray-200 sm:w-1/2">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th scope="col"
@@ -44,8 +44,8 @@
                 $('#hak-akses-table').DataTable({
                     processing: true,
                     serverSide: true,
-                    responsive: true,
-                    autoWidth: false,
+                    autoWidth: true,
+                    scrollX: true,
                     ajax: {
                         // Pastikan route ini ada dan mengembalikan data JSON
                         url: "{{ route('hak-akses.index') }}",
@@ -60,8 +60,11 @@
                         $('.dt-search input[type="search"]').addClass(
                             'bg-white text-gray-700 border-gray-300');
                     },
-                    dom: '<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"lf>' +
-                        'rt' + '<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"ip>',
+                    dom: '<"flex flex-row items-center justify-between gap-4 py-4"lf>t<"flex flex-row items-center justify-between gap-4 py-4"ip>',
+                    drawCallback: function(settings) {
+                        // Memaksa penyesuaian ulang lebar kolom setiap kali tabel digambar ulang (misal: setelah search)
+                        this.api().columns.adjust();
+                    },
                     columns: [{
                             data: 'nama',
                             name: 'nama',

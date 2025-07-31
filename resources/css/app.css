@@ -39,3 +39,10 @@
     box-shadow: 0 0 0 1px rgba(165, 180, 252, 0.5); /* focus ring */
 }
 
+.dt-search input[type="search"] {
+    @apply bg-white text-gray-700 border border-gray-300 rounded;
+}
+
+.dt-length select {
+    @apply bg-white text-gray-700 border border-gray-300 rounded;
+}

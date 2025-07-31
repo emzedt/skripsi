@@ -7,47 +7,42 @@
 
     <div class="py-6">
         <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-            <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <table id="persetujuan-cuti-table" class="min-w-full dt-tailwindcss divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                                    ID</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                                    Nama Karyawan</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                                    Nama Cuti</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
-                                    Jenis Cuti</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                                    Mulai</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                                    Selesai</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
-                                    Sisa Cuti</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
-                                    Status</th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
-                                    Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            {{-- Diisi oleh DataTables --}}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="p-6 bg-white border-b border-gray-200">
+                <table id="persetujuan-cuti-table" class="min-w-full dt-tailwindcss divide-y divide-gray-200"
+                    style="width: 100%">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                ID</th>
+                            <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                Nama Karyawan</th>
+                            <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                Nama Cuti</th>
+                            <th
+                                class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
+                                Jenis Cuti</th>
+                            <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                Mulai</th>
+                            <th class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                Selesai</th>
+                            <th
+                                class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
+                                Sisa Cuti</th>
+                            <th
+                                class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
+                                Status</th>
+                            <th
+                                class="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">
+                                Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {{-- Diisi oleh DataTables --}}
+                    </tbody>
+                </table>
             </div>
         </div>
+    </div>
     </div>
 
     @push('scripts')
@@ -64,15 +59,20 @@
                 // Inisialisasi DataTables
                 window.persetujuanCutiTable = $('#persetujuan-cuti-table').DataTable({
                     processing: true,
+                    autoWidth: false,
                     serverSide: true,
-                    responsive: true,
+                    scrollX: true,
                     ajax: "{{ route('persetujuan_cuti.index') }}", // Sesuaikan nama route jika perlu
                     language: {
                         lengthMenu: '_MENU_',
                         search: '',
                         searchPlaceholder: "Cari..."
                     },
-                    dom: '<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"lf>rt<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"ip>',
+                    dom: '<"flex flex-row items-center justify-between gap-4 py-4"lf>t<"flex flex-row items-center justify-between gap-4 py-4"ip>',
+                    drawCallback: function(settings) {
+                        // Memaksa penyesuaian ulang lebar kolom setiap kali tabel digambar ulang (misal: setelah search)
+                        this.api().columns.adjust();
+                    },
                     initComplete: function() {
                         $('.dt-length select').addClass('!bg-white !text-gray-700 !border-gray-300 w-16');
                         $('.dt-search input[type="search"]').addClass(

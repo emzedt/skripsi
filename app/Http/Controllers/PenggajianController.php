@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Absensi;
 use App\Models\AbsensiSales;
+use App\Models\GajiBulanan;
+use App\Models\GajiHarian;
 use App\Models\Izin;
 use App\Models\Kalender;
 use App\Models\Penggajian;
@@ -333,7 +335,7 @@ class PenggajianController extends Controller
         return view('penggajian.show', compact('penggajian', 'totalJamLembur'));
     }
 
-    public function slip(Penggajian $penggajian)
+    public function slip(Penggajian $penggajian, GajiHarian $gajiHarian, GajiBulanan $gajiBulanan)
     {
         // Calculate overtime data
         $overtimeOver5Hours = $penggajian->user->permintaanLembur

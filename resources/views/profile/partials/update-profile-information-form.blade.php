@@ -5,7 +5,7 @@
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            {{ __('Perbarui nama, email, no. hp, dan no. rekening pada akun anda') }}
+            {{ __('Perbarui nama, no. hp, dan no. rekening pada akun Anda') }}
         </p>
     </header>
 
@@ -54,13 +54,6 @@
             <x-input-label for="no_hp" :value="__('No. HP')" />
             <x-text-input id="no_hp" class="block mt-1 w-full" type="number" name="no_hp" :value="old('no_hp', $user->no_hp)" />
             <x-input-error :messages="$errors->get('no_hp')" class="mt-2" />
-        </div>
-
-        <div>
-            <x-input-label for="no_rekening" :value="__('No. Rekening')" />
-            <x-text-input id="no_rekening" class="block mt-1 w-full" type="number" name="no_rekening"
-                :value="old('no_rekening', $user->no_rekening)" />
-            <x-input-error :messages="$errors->get('no_rekening')" class="mt-2" />
         </div>
 
         <div>

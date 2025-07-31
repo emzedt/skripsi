@@ -1,6 +1,6 @@
 <aside id="default-sidebar"
     class="fixed top-0 left-0 z-50 w-64 bg-black border-r border-gray-200 dark:bg-black dark:border-gray-700
-           transition-transform duration-300 -translate-x-full h-full"
+        transition-transform duration-300 -translate-x-full h-full"
     aria-label="Sidenav">
     <div class="flex flex-col h-full py-5 px-3 bg-black border-r border-gray-200 dark:bg-black dark:border-gray-700">
         <div class="flex-1 overflow-y-auto no-scrollbar px-3">
@@ -32,7 +32,7 @@
                     </ul>
                     <li>
                         <button type="button"
-                            class="flex items-center justify-between p-2 w-full text-base font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                            class="flex items-center justify-between p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                             data-collapse-toggle="dropdown-pages">
                             <div class="flex items-center">
                                 <svg aria-hidden="true" fill="none"
@@ -123,7 +123,7 @@
             <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
                 <li>
                     <button type="button"
-                        class="flex items-center justify-between p-2 w-full text-base font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                        class="flex items-center justify-between p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                         data-collapse-toggle="dropdown-absensi">
                         <div class="flex items-center">
                             <svg aria-hidden="true"
@@ -181,7 +181,7 @@
                 <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
                     <li>
                         <button type="button"
-                            class="flex items-center justify-between p-2 w-full text-base font-normal text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                            class="flex items-center justify-between p-2 w-full text-base font-medium text-gray-900 rounded-lg transition duration-75 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                             data-collapse-toggle="dropdown-cuti">
                             <div class="flex items-center">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"

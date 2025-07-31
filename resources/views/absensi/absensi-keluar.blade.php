@@ -18,6 +18,10 @@
             <button id="capture-btn" class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700">
                 Ambil Foto
             </button>
+            <a href="{{ route('absensi.index') }}"
+                class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Batal
+            </a>
             <button id="submit-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 hidden">
                 Submit Absensi
             </button>

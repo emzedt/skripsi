@@ -50,14 +50,19 @@
                 const table = $('#people-development-table').DataTable({
                     processing: true,
                     serverSide: true,
-                    responsive: true,
+                    autoWidth: true,
+                    scrollX: true,
                     ajax: "{{ route('people_development.index') }}",
                     language: {
                         lengthMenu: '_MENU_',
                         search: '',
                         searchPlaceholder: "Cari..."
                     },
-                    dom: '<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"lf>rt<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"ip>',
+                    dom: '<"flex flex-row items-center justify-between gap-4 py-4"lf>t<"flex flex-row items-center justify-between gap-4 py-4"ip>',
+                    drawCallback: function(settings) {
+                        // Memaksa penyesuaian ulang lebar kolom setiap kali tabel digambar ulang (misal: setelah search)
+                        this.api().columns.adjust();
+                    },
                     initComplete: function() {
                         $('.dt-length select, .dt-search input').addClass(
                             '!bg-white !text-gray-700 !border-gray-300');

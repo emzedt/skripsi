@@ -21,7 +21,8 @@
                         </a>
                     </div>
 
-                    <table id="izin-table" class="min-w-full dt-tailwindcss divide-y divide-gray-200">
+                    <table id="izin-table" class="min-w-full dt-tailwindcss divide-y divide-gray-200"
+                        style="width: 100%">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th
@@ -104,14 +105,19 @@
                 window.izinTable = $('#izin-table').DataTable({
                     processing: true,
                     serverSide: true,
-                    responsive: true,
+                    autoWidth: false,
+                    scrollX: true,
                     ajax: "{{ route('izin.index') }}",
                     language: {
                         lengthMenu: '_MENU_',
                         search: '',
                         searchPlaceholder: "Cari..."
                     },
-                    dom: '<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"lf>rt<"flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4"ip>',
+                    dom: '<"flex flex-row items-center justify-between gap-4 py-4"lf>t<"flex flex-row items-center justify-between gap-4 py-4"ip>',
+                    drawCallback: function(settings) {
+                        // Memaksa penyesuaian ulang lebar kolom setiap kali tabel digambar ulang (misal: setelah search)
+                        this.api().columns.adjust();
+                    },
                     initComplete: function() {
                         $('.dt-length select').addClass('!bg-white !text-gray-700 !border-gray-300 w-16');
                         $('.dt-search input[type="search"]').addClass(
